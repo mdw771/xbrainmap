@@ -86,14 +86,18 @@ def tiff_to_hdf5_files():
     
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
-    size = MPI.COMM_WORLD.Get_size()
+    size = comm.Get_size()
     name = MPI.Get_processor_name()
     
     start_time = int(time.time())
     files = sorted(glob(tiff_files_location + '/*.tif*'))
     parent_dir, tiff_dir = os.path.split(tiff_files_location)
-    hdf_dir = parent_dir + '/' + tiff_dir + '_' + 'mpi' + '_hdf'
-    
+    hdf_dir = parent_dir + '/' + tiff_dir + '_hdf'
+
+    # Make a list with files to be processed by each process/rank.
+    files_per_rank = int(len(files)/size)
+
+
     # Remove all *.hdf5 files from previous runs. Create directory if does not exist
     if rank == 0:
         if os.path.exists(hdf_dir):
@@ -102,32 +106,18 @@ def tiff_to_hdf5_files():
                os.remove(file)
         if not os.path.exists(hdf_dir):
             os.mkdir(hdf_dir)
-    comm.Barrier()
-    
+
     data_shape = imread(files[0]).shape
     data_type = imread(files[0]).dtype
+    hdf_file_name = hdf_dir + '/bacon.hdf5'
+    hdf_file = h5py.File(hdf_file_name, 'w+')
+    data_set_name = 'image'
+    data_set = hdf_file.create_dataset(data_set_name, (len(files), data_shape[0], data_shape[1]), data_type)
+    comm.Barrier()
     
-    # Make a list with files to be processed by each process/rank. 
-    files_per_rank = int(len(files)/size)
-    # If number of tiff files is not exact multiple of ranks then a few tiff files will not be used.
-    if rank == 0:
-        print("*** Number of files not processed is %d ***" % ((len(files)) - files_per_rank * size))
-    files = files[0: (files_per_rank * size)]
-    files_for_rank = files[(rank * files_per_rank) : ((rank + 1) * files_per_rank)]
-    
-    first_file_name, first_file_ext = os.path.splitext(os.path.basename(files_for_rank[0]))
-    last_file_name, last_file_ext = os.path.splitext(os.path.basename(files_for_rank[-1]))
-    j = str(rank+1)
-    hdf_file_name = hdf_dir + '/'+first_file_name + '_' + j + '_' + last_file_name + '.hdf5'
-    
-    hdf_file = h5py.File(hdf_file_name, 'w')
-    data_set_name = tiff_dir + '_' + j
-    
-    data_set = hdf_file.create_dataset(data_set_name, (len(files_for_rank), data_shape[0], data_shape[1]), 
-                                       data_type, chunks=(1, data_shape[0], data_shape[1]))
-    
-    for idx in range(len(files_for_rank)):
-        data_set[idx, :, :] = imread(files_for_rank[idx])
+
+    for idx in range(rank*len(files_per_rank),(rank+1)*len(files_for_rank)):
+        data_set[idx, :, :] = imread(idx)
     
     print("data shape is", data_set.shape)
     hdf_file.close()

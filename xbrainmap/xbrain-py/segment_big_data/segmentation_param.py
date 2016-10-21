@@ -88,7 +88,7 @@ if 'alcf' in host_name:
 
 else:
     tiff_files_location = '/Users/mehditondravi/Downloads/eva_block'
-    classifier = '/Users/mehditondravi/xray_data/train_data/my_s4_block_2.ilp'
+    classifier = '/Users/Ming/Research/Programs/xbrainmap/xbrainmap/xbrainmap/xbrain-py/test_data/train_data/my_s4_block_2.ilp'
 #    classifier = '/Users/mehditondravi/playground/mat_to_python/ilastik_play/xbrain/library/ilastik_classifiers/ilastik_test_s4.ilp'
 # Cell and vessel detection sub-volume sizes
     sub_vol_x = 140
